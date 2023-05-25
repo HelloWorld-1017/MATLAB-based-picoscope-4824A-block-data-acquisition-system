@@ -20,4 +20,4 @@ Additionally, icons of GUI Buttons are available at: [Remix-Design/RemixIcon: Op
 
 # Usage
 
-Download and unzip this repository, and then run the `run.m`.
+Download and unzip this repository, and then run the `.\gui\run.m`.
