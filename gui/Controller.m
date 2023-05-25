@@ -19,36 +19,12 @@ classdef Controller < handle
             obj.modelObj.callback_disconnectDevice();
         end
 
-        function controller_runCollecting(obj,~,~)
-            obj.modelObj.callback_captureData();
-        end
-
         function controller_updateChannelSettings(obj,~,~)
             obj.modelObj.callback_changeChannelSettings;
         end
 
         function controller_updateChannelRangeSettings(obj,~,~)
             obj.modelObj.callback_changeChannelRange;
-        end
-
-        function controller_closeApp(obj,~,~)
-            obj.modelObj.callback_closeApp();
-        end
-
-        function controller_saveData(obj,~,~)
-            obj.modelObj.callback_saveData();
-        end
-
-        function controller_clearAxes(obj,~,~)
-            obj.modelObj.callback_clearAxes();
-        end
-
-        function controller_updateEnableCheckBox(obj,~,~)
-            obj.modelObj.callback_updateEnableCheckBox();
-        end
-
-        function controller_stopCaptureData(obj,src,~)
-            obj.modelObj.callback_stopCaptureData(src);
         end
 
         function controller_updateTriggerSettings(obj,~,~)
@@ -59,8 +35,32 @@ classdef Controller < handle
             obj.modelObj.callback_updateAutoTriggerEnable();
         end
 
+        function controller_updateEnableCheckBox(obj,~,~)
+            obj.modelObj.callback_updateEnableCheckBox();
+        end
+
+        function controller_runCollecting(obj,~,~)
+            obj.modelObj.callback_captureData();
+        end
+
+        function controller_stopCaptureData(obj,src,~)
+            obj.modelObj.callback_stopCaptureData(src);
+        end
+
+        function controller_clearAxes(obj,~,~)
+            obj.modelObj.callback_clearAxes();
+        end
+
+        function controller_saveData(obj,~,~)
+            obj.modelObj.callback_saveData();
+        end
+
         function controller_loadMatDataFile(obj,~,~)
             obj.modelObj.callback_loadMatDataFile();
+        end
+
+        function controller_closeApp(obj,~,~)
+            obj.modelObj.callback_closeApp();
         end
     end
 end

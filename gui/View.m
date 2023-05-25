@@ -410,13 +410,13 @@ classdef View < handle
                 end
             end
             
-
             % If a channel is disabled but the trigger is still set at the channel
             EnabledChannels = obj.modelObj.AvailableChannels(EnabledChannelsIdx);
             if sum(strcmp(obj.TriggerSettings.SimpleTriggerChannel.Value,EnabledChannels)) == 0
                 WarningDialogText = strcat("Channel ",obj.TriggerSettings.SimpleTriggerChannel.Value," has been disabled, ",...
                     "so the programe automatically sets the trigger at Channel ",EnabledChannels(1),".");
                 set(obj.TriggerSettings.SimpleTriggerChannel,'Value',EnabledChannels(1));
+                obj.controlObj.controller_updateTriggerSettings();
                 warndlg(WarningDialogText);
             end
 

@@ -38,7 +38,6 @@ classdef Model < handle
         notifier_updateTriggerSettings;
         notifier_updateChannelEnable;
 
-        
         notifier_DataCollectedSuccessfully;
         notifier_loadDataSuccessfully;
         notifier_collectingData;
