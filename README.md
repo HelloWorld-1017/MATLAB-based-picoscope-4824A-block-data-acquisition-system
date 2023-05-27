@@ -9,7 +9,9 @@ This is a simple MATLAB-based PicoScope 4824A Data Acquisition System, prelimina
 # Requirements
 
 - Hardware: [PicoScope 4824A Oscilloscope (PicoScope 4000A Series)](https://www.picotech.com/oscilloscope/4000/picoscope-4000-series) by [Pico Technology Ltd](https://www.picotech.com/).
-- Required MATLAB Toolboxes
+- Oscilloscope Software Development Kit (SDK): [PicoScope oscilloscope software and PicoLog data logging software - picotech](https://www.picotech.com/downloads).
+- MATLAB and Required Toolboxes
+  - MATLAB: the GUI is created and test by MATLAB R2022a Version 9.12.
   - MATLAB Instrument Control Toolbox: [Instrument Control Toolbox - MATLAB](https://ww2.mathworks.cn/en/products/instrument.html).
   - MATLAB PicoScope Support Toolbox: [picotech/picosdk-matlab-picoscope-support-toolbox: A Toolbox for use with Pico Technology Instrument Drivers. - GitHub](https://github.com/picotech/picosdk-matlab-picoscope-support-toolbox).
   - MATLAB PicoScope 4000 Series A API MATLAB Generic Instrument Driver: [picotech/picosdk-ps4000a-matlab-instrument-driver: MATLAB® Instrument Driver for use with PicoScope® 4000 (A API) Series oscilloscopes - GitHub](https://github.com/picotech/picosdk-ps4000a-matlab-instrument-driver).
