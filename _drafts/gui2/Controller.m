@@ -16,7 +16,6 @@ classdef Controller < handle
         function obj = Controller(viewObj,modelObj)
             obj.viewObj = viewObj;
             obj.modelObj = modelObj;
-            obj.constructMaps();
         end
 
         % Create mappings
@@ -70,8 +69,6 @@ classdef Controller < handle
             obj.TriggerDirectionMaps("RISING_OR_FALLING") = obj.modelObj.ps4000aEnuminfo.enPS4000AThresholdDirection.PS4000A_RISING_OR_FALLING;
         end
 
-
-        
         function controller_updateAutoTriggerEnable(obj,~,~)
             obj.modelObj.callback_updateAutoTriggerEnable();
         end
@@ -113,47 +110,10 @@ classdef Controller < handle
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        function controller_connectDevice(obj,~,~)
-            obj.modelObj.callback_connectDevice();
-        end
-
-        function controller_disconnectDevice(obj,~,~)
-            obj.modelObj.callback_disconnectDevice();
-        end
-
-        function controller_updateChannelSettings(obj,~,~)
-            obj.modelObj.callback_changeChannelSettings;
-        end
-
-        function controller_updateChannelRangeSettings(obj,~,~)
-            obj.modelObj.callback_changeChannelRange;
-        end
-
-        function controller_updateTriggerSettings(obj,~,~)
-            obj.modelObj.callback_updateTriggerSettings();
-        end
-
-
-
-        function controller_updateEnableCheckBox(obj,~,~)
-            obj.modelObj.callback_updateEnableCheckBox();
-        end
+ 
         function controller_runCollecting(obj,~,~)
-            obj.modelObj.callback_captureData();
+            stopFlg = get(obj.viewObj.ControlButtons.StopButton,'Value');
+            obj.modelObj.callback_captureData(stopFlg);
         end
         function controller_stopCaptureData(obj,src,~)
             obj.modelObj.callback_stopCaptureData(src);
@@ -161,14 +121,65 @@ classdef Controller < handle
         function controller_clearAxes(obj,~,~)
             obj.modelObj.callback_clearAxes();
         end
-        function controller_saveData(obj,~,~)
-            obj.modelObj.callback_saveData();
+
+
+
+
+        % ======================= modified ===========================
+        function controller_connectDevice(obj,~,~)
+            obj.modelObj.callback_connectDevice();
+            obj.constructMaps();
         end
-        function controller_loadMatDataFile(obj,~,~)
-            obj.modelObj.callback_loadMatDataFile();
+
+        function controller_disconnectDevice(obj,~,~)
+            obj.modelObj.callback_disconnectDevice();
         end
+
+        function controller_updateChannelSettings(obj,~,~)
+            obj.modelObj.callback_changeChannelSettings();
+        end
+
+
+
+        function controller_updateTriggerSettings(obj,~,~)
+            obj.modelObj.callback_updateTriggerSettings();
+        end
+
         function controller_closeApp(obj,~,~)
-            obj.modelObj.callback_closeApp();
+            obj.modelObj.callback_closeApp(obj.viewObj.fig);
         end
+
+        function controller_saveData(obj,~,~)
+            obj.modelObj.callback_saveData(obj.viewObj.fig);
+        end
+
+        function controller_loadMatDataFile(obj,~,~)
+            obj.modelObj.callback_loadMatDataFile(obj.viewObj.fig);
+        end
+
+        function controller_updateChannelEnableCheckBox(obj,src,event)
+            EnableVal = obj.ChannelEnableMaps(num2str(src.Value));
+            ChannelName = event.Source.Tag(end);
+            obj.modelObj.callback_updateChannelEnableCheckBox(ChannelName,EnableVal);
+        end
+
+        function controller.controller_updateChannelCouplingSetting(obj,src,event)
+            ChannelName = event.Source.Tag(end);
+            CouplingVal = obj.ChannelCouplingMaps(src.Value);
+            obj.modelObj.callback_updateChannelCouplingSetting(ChannelName,CouplingVal);
+        end
+
+        function controller_updateChannelRangeSetting(obj,src,event)
+            ChannelName = event.Source.Tag(end);
+            RangeVal = obj.ChannelRangeMaps(src.Value);
+            obj.modelObj.callback_updateChannelRangeSetting(ChannelName,RangeVal);
+        end
+
+        function controller_updateChannelOffsetSetting(obj,src,event)
+            ChannelName = event.Source.Tag(end);
+            OffsetVal = obj.ChannelOffsetMaps(src.Value);
+            obj.modelObj.callback_updateChannelOffsetSetting(ChannelName,OffsetVal);
+        end
+        
     end
 end
