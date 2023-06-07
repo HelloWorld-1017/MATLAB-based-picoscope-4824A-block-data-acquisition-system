@@ -18,11 +18,12 @@ classdef View < handle
         DataLineWidth = 2.0;
     end
 
-    methods
+    methods % Initialize
         % Constructor of 'View' class 
         function obj = View()
             % Make model
-            obj.modelObj = Model(obj);
+            obj.modelObj = Model();
+
             % Make controller
             obj.controlObj = Controller(obj,obj.modelObj);
 
@@ -32,12 +33,6 @@ classdef View < handle
             % Initialize GUI components
             obj.buildUI();
 
-            % Connecting the device for the first time
-            obj.controlObj.controller_connectDevice();
-
-            % Update the x- and y-range of the axes according to 
-            obj.updateXYAxis();
-
             % Bundle controller functions
             obj.attachToController(obj.controlObj);
         end
@@ -46,8 +41,9 @@ classdef View < handle
         function addListeners(obj)
             obj.modelObj.addlistener('notifier_DeviceConnectionStateChanged',@obj.changeConnectionDisplayState);
             obj.modelObj.addlistener('notifier_updateChannelRangeSettings',@obj.updateXYAxis);
-            obj.modelObj.addlistener('notifier_updateTriggerSettings',@obj.updateXYAxis);
-            obj.modelObj.addlistener('notifier_clearAxes',@obj.clearDataAndAxes);
+            obj.modelObj.addlistener('notifier_updatePreTriggerSetting',@obj.updateXYAxis);
+            obj.modelObj.addlistener('notifier_updatePostTriggerSetting',@obj.updateXYAxis);
+            obj.modelObj.addlistener('notifier_clearDataAndAxes',@obj.clearDataAndAxes);
             obj.modelObj.addlistener('notifier_collectingData',@obj.updateInterfaceDuringCollection);
             obj.modelObj.addlistener('notifier_DataCollectedSuccessfully',@obj.updateChannelAxesIfHasData);
             obj.modelObj.addlistener('notifier_DataCollectedSuccessfully',@obj.updateInterfaceAfterCollection);
@@ -67,20 +63,32 @@ classdef View < handle
             set(obj.ControlButtons.RunButton,'ButtonPushedFcn',@controller.controller_runCollecting);
             set(obj.ControlButtons.StopButton,'ValueChangedFcn',@controller.controller_stopCaptureData);
 
+            % Set callbacks for trigger setting widgets
             set(obj.TriggerSettings.AutoTriggerEnable,'ValueChangedFcn',@controller.controller_updateAutoTriggerEnable);
-            set(obj.TriggerSettings.AutoTrigger,'ValueChangedFcn',@controller.controller_updateTriggerSettings);
-            set(obj.TriggerSettings.SimpleTriggerChannel,'ValueChangedFcn',@controller.controller_updateTriggerSettings);
-            set(obj.TriggerSettings.SimpleTriggerThreshold,'ValueChangedFcn',@controller.controller_updateTriggerSettings);
-            set(obj.TriggerSettings.SimpleTriggerDirection,'ValueChangedFcn',@controller.controller_updateTriggerSettings);
-            set(obj.TriggerSettings.PreTrigger,'ValueChangedFcn',@controller.controller_updateTriggerSettings);
-            set(obj.TriggerSettings.PostTrigger,'ValueChangedFcn',@controller.controller_updateTriggerSettings);
+            controller.controller_updateAutoTriggerEnable();
+            set(obj.TriggerSettings.AutoTrigger,'ValueChangedFcn',@controller.controller_updateAutoTriggerSetting);
+            controller.controller_updateAutoTriggerSetting(obj.TriggerSettings.AutoTrigger);
+            set(obj.TriggerSettings.SimpleTriggerChannel,'ValueChangedFcn',@controller.controller_updateTriggerChannel);
+            controller.controller_updateTriggerChannel(obj.TriggerSettings.SimpleTriggerChannel);
+            set(obj.TriggerSettings.SimpleTriggerThreshold,'ValueChangedFcn',@controller.controller_updateTriggerThreshold);
+            controller.controller_updateTriggerThreshold(obj.TriggerSettings.SimpleTriggerThreshold);
+            set(obj.TriggerSettings.SimpleTriggerDirection,'ValueChangedFcn',@controller.controller_updateSimpleTriggerDirection);
+            controller.controller_updateSimpleTriggerDirection(obj.TriggerSettings.SimpleTriggerDirection);
+            set(obj.TriggerSettings.PreTrigger,'ValueChangedFcn',@controller.controller_updatePreTrigger);
+            controller.controller_updatePreTrigger(obj.TriggerSettings.PreTrigger);
+            set(obj.TriggerSettings.PostTrigger,'ValueChangedFcn',@controller.controller_updatePostTrigger);
+            controller.controller_updatePostTrigger(obj.TriggerSettings.PostTrigger);
 
             for i = 1:numel(obj.modelObj.AvailableChannels)
                 ChannelName = obj.modelObj.AvailableChannels(i);
-                set(obj.ChannelSettings.(ChannelName).ChannelEnable,'ValueChangedFcn',@controller.controller_updateEnableCheckBox);
-                set(obj.ChannelSettings.(ChannelName).ChannelCoupling,'ValueChangedFcn',@controller.controller_updateChannelSettings);
-                set(obj.ChannelSettings.(ChannelName).ChannelRange,'ValueChangedFcn',@controller.controller_updateChannelRangeSettings);
-                set(obj.ChannelSettings.(ChannelName).ChannelOffset,'ValueChangedFcn',@controller.controller_updateChannelSettings);
+                set(obj.ChannelSettings.(ChannelName).ChannelEnable,'ValueChangedFcn',@controller.controller_updateChannelEnableCheckBox);
+                controller.controller_updateChannelEnableCheckBox(obj.ChannelSettings.(ChannelName).ChannelEnable); % This line
+                set(obj.ChannelSettings.(ChannelName).ChannelCoupling,'ValueChangedFcn',@controller.controller_updateChannelCouplingSetting);
+                controller.controller_updateChannelCouplingSetting(obj.ChannelSettings.(ChannelName).ChannelCoupling); % This line
+                set(obj.ChannelSettings.(ChannelName).ChannelRange,'ValueChangedFcn',@controller.controller_updateChannelRangeSetting);
+                controller.controller_updateChannelRangeSetting(obj.ChannelSettings.(ChannelName).ChannelRange);
+                set(obj.ChannelSettings.(ChannelName).ChannelOffset,'ValueChangedFcn',@controller.controller_updateChannelOffsetSetting);
+                controller.controller_updateChannelOffsetSetting(obj.ChannelSettings.(ChannelName).ChannelOffset);
             end
 
             set(obj.ToolButtons.loadDataButton,'ButtonPushedFcn',@controller.controller_loadMatDataFile);
@@ -136,59 +144,60 @@ classdef View < handle
 
             % Create control widgets
             obj.ControlButtons.ConnectButton = uibutton(obj.UIGrid.ControlGrid,'Text','Connect', ...
-                'FontSize',obj.ButtonFontSize,'Icon','icons\connect.png','IconAlignment','left');
+                'FontSize',obj.ButtonFontSize,'Icon','icons\connect.png','IconAlignment','left','Enable','on');
             obj.ControlButtons.DisconnectButton = uibutton(obj.UIGrid.ControlGrid,'Text','Disconnect', ...
-                'FontSize',obj.ButtonFontSize,'Icon','icons\disconnect.png','IconAlignment','left');
+                'FontSize',obj.ButtonFontSize,'Icon','icons\disconnect.png','IconAlignment','left','Enable','off');
             obj.ControlButtons.RunButton = uibutton(obj.UIGrid.ControlGrid,'Text','Run',...
-                'FontSize',obj.ButtonFontSize,'icon','icons\run.png','IconAlignment','left');
+                'FontSize',obj.ButtonFontSize,'icon','icons\run.png','IconAlignment','left','Enable','off');
             obj.ControlButtons.StopButton = uibutton(obj.UIGrid.ControlGrid,'state','Text','Stop', ...
-                'FontSize',obj.ButtonFontSize,'icon','icons\stop.png','IconAlignment','left','Enable','on','Value',0);
+                'FontSize',obj.ButtonFontSize,'icon','icons\stop.png','IconAlignment','left','Enable','off','Value',0);
 
             % Create trigger setting widgets
             % Auto-trigger setting
             obj.TriggerSettings.AutoTriggerLabel = uilabel(obj.UIGrid.TriggerGrid, ...
-                'Text','Auto trigger','FontSize',obj.LabelFontSize);
+                'Text','Auto trigger','FontSize',obj.LabelFontSize,'Enable','off');
             AutoTriggerGrid = uigridlayout(obj.UIGrid.TriggerGrid, ...
                 'RowHeight',{'1x'},'ColumnWidth',{'1x','1x'}, ...
                 'Padding',[0,0,0,0],'ColumnSpacing',0,'RowSpacing',0);
-            obj.TriggerSettings.AutoTriggerEnable = uicheckbox(AutoTriggerGrid,'Text','Enable','Value',0);
+            obj.TriggerSettings.AutoTriggerEnable = uicheckbox(AutoTriggerGrid,'Text','Enable','Value',0,'Enable','off');
             obj.TriggerSettings.AutoTrigger = uispinner(AutoTriggerGrid, ...
                 'step',1e2,'Value',0,'ValueDisplayFormat','%.0f ms', ...
                 'Limits',[0,32767],'Editable','on','Visible','off');
             
             % Simple trigger setting (Channel)
             obj.TriggerSettings.SimpleTriggerChannelLabel = uilabel(obj.UIGrid.TriggerGrid, ...
-                'Text','Simple trigger (Channel)','FontSize',obj.LabelFontSize);
+                'Text','Simple trigger (Channel)','FontSize',obj.LabelFontSize,'Enable','off');
             obj.TriggerSettings.SimpleTriggerChannel = uidropdown(obj.UIGrid.TriggerGrid, ...
-                'Items',obj.modelObj.AvailableChannels);
+                'Items',obj.modelObj.AvailableChannels,'Enable','off', ...
+                'Value','A');
 
             % Simple trigger setting (Threshold)
             obj.TriggerSettings.SimpleTriggerThresholdLabel = uilabel(obj.UIGrid.TriggerGrid, ...
-                'Text','Simple trigger (Threshold)','FontSize',obj.LabelFontSize);
+                'Text','Simple trigger (Threshold)','FontSize',obj.LabelFontSize,'Enable','off');
             obj.TriggerSettings.SimpleTriggerThreshold = uispinner(obj.UIGrid.TriggerGrid, ...
                 'step',1e2,'Value',5e2,'ValueDisplayFormat','%.0f mV', ...
-                'Limits',[0,2e3],'Editable','on');
+                'Limits',[0,2e3],'Editable','on','Enable','off');
 
             % Simple trigger setting (Direction)
             obj.TriggerSettings.SimpleTriggerDirectionLabel = uilabel(obj.UIGrid.TriggerGrid, ...
-                'Text','Simple trigger (Direction)','FontSize',obj.LabelFontSize);
+                'Text','Simple trigger (Direction)','FontSize',obj.LabelFontSize,'Enable','off');
             obj.TriggerSettings.SimpleTriggerDirection = uidropdown(obj.UIGrid.TriggerGrid, ...
                 'Items',["ABOVE","BELOW","RISING","FALLING","RISING_OR_FALLING"], ...
-                'Value',"RISING");
+                'Value',"RISING",'Enable','off');
 
             % Pre-trigger sample setting
             obj.TriggerSettings.PreTriggerLabel = uilabel(obj.UIGrid.TriggerGrid, ...
-                'Text','Pre-trigger samples','FontSize',obj.LabelFontSize);
+                'Text','Pre-trigger samples','FontSize',obj.LabelFontSize,'Enable','off');
             obj.TriggerSettings.PreTrigger = uispinner(obj.UIGrid.TriggerGrid, ...
                 'Value',1e3,'step',1e3,'ValueDisplayFormat','%.0f ms',...
-                'Limits',[0,inf],'Editable','on');
+                'Limits',[0,inf],'Editable','on','Enable','off');
 
             % Post-trigger sample setting
             obj.TriggerSettings.PostTriggerLabel = uilabel(obj.UIGrid.TriggerGrid, ...
-                'Text','Post-trigger samples','FontSize',obj.LabelFontSize);
+                'Text','Post-trigger samples','FontSize',obj.LabelFontSize,'Enable','off');
             obj.TriggerSettings.PostTrigger = uispinner(obj.UIGrid.TriggerGrid, ...
                 'Value',1e3,'step',1e3,'ValueDisplayFormat','%.0f ms',...
-                'Limits',[1e2,inf],'Editable','on');
+                'Limits',[1e2,inf],'Editable','on','Enable','off');
 
             % Create channel setting widgets
             obj.ChannelColors.A = [56,157,233]/255;
@@ -247,22 +256,51 @@ classdef View < handle
             end
             % Create channel setting widgets in obj.UIGrid.ChannelSettingGrid function
             function Widgets = createChannelSettingWidgets(ParentGrid,name,ChannelColor)
-                Widgets.ChannelName = uilabel(ParentGrid,'Text',strcat("Channel ",name), ...
-                    'FontSize',obj.LabelFontSize,'BackgroundColor',ChannelColor, ...
-                    'FontColor','w','FontWeight','bold');
+                Widgets.ChannelName = uilabel(ParentGrid, ...
+                    'Text',strcat("Channel ",name), ...
+                    'FontSize',obj.LabelFontSize, ...
+                    'BackgroundColor',ChannelColor, ...
+                    'FontColor','w', ...
+                    'FontWeight','bold', ...
+                    'Enable','off');
                 StateGrid = uigridlayout(ParentGrid, ...
                     'RowHeight',{'1x'},'ColumnWidth',{'1x','1x'}, ...
                     'Padding',[0,0,0,0],'ColumnSpacing',0,'RowSpacing',0);
-                Widgets.ChannelEnable = uicheckbox(StateGrid,'Text','Enable','Value',1);
-                Widgets.ChnnnelEnableLamp = uilamp(StateGrid,'Color','Green');
-                Widgets.CouplingLable = uilabel(ParentGrid,'Text','Coupling','FontSize',obj.LabelFontSize);
-                Widgets.ChannelCoupling = uidropdown(ParentGrid,'Items',["DC","AC"]);
-                Widgets.RangeLable = uilabel(ParentGrid,'Text','Range','FontSize',obj.LabelFontSize);
-                Widgets.ChannelRange = uidropdown(ParentGrid,'value',"5 V",...
-                    'Items',["10 mV","20 mV","50 mV","100 mV","200 mV","500 mV","1 V","2 V","5 V","10 V","20 V","50 V"]);
-                Widgets.AnalogueOffsetLable = uilabel(ParentGrid,'Text','Analogue offset','FontSize',obj.LabelFontSize);
-                Widgets.ChannelOffset = uidropdown(ParentGrid,'Items',"0.0"); % Offset is always set to 0.0
+                Widgets.ChannelEnable = uicheckbox(StateGrid, ...
+                    'Text','Enable', ...
+                    'Value',1, ...
+                    'Tag',strcat("Enable",name), ...
+                    'Enable','off');
+                Widgets.ChnnnelEnableLamp = uilamp(StateGrid, ...
+                    'Color','Green', ...
+                    'Enable','off');
+                Widgets.CouplingLable = uilabel(ParentGrid, ...
+                    'Text','Coupling', ...
+                    'FontSize',obj.LabelFontSize, ...
+                    'Enable','off');
+                Widgets.ChannelCoupling = uidropdown(ParentGrid, ...
+                    'Items',["DC","AC"], ...
+                    'Tag',strcat("Coupling",name), ...
+                    'Enable','off');
+                Widgets.RangeLable = uilabel(ParentGrid, ...
+                    'Text','Range', ...
+                    'FontSize',obj.LabelFontSize, ...
+                    'Enable','off');
+                Widgets.ChannelRange = uidropdown(ParentGrid, ...
+                    'value',"5 V",...
+                    'Items',["10 mV","20 mV","50 mV","100 mV","200 mV","500 mV","1 V","2 V","5 V","10 V","20 V","50 V"], ...
+                    'Tag',strcat("Range",name), ...
+                    'Enable','off');
+                Widgets.AnalogueOffsetLable = uilabel(ParentGrid, ...
+                    'Text','Analogue offset', ...
+                    'FontSize',obj.LabelFontSize, ...
+                    'Enable','off');
+                Widgets.ChannelOffset = uidropdown(ParentGrid, ...
+                    'Items',"0.0", ...
+                    'tag',strcat("Offset",name), ...
+                    'Enable','off'); % Offset is always set to 0.0
             end
+
             % Create display Axes for each channel 
             function ax = createChannelAxes(AxesGrid,ChannelName)
                 ax = axes('Parent',AxesGrid);
@@ -287,7 +325,34 @@ classdef View < handle
 
                 % Set Yaxis
                 ylabel(channelAxes,sprintf("Voltage (V)"));
-                yLimit = obj.modelObj.ChannelRanges.(ChannelName)/1e3;
+
+                switch obj.ChannelSettings.(ChannelName).ChannelRange.Value
+                    case "10 mV"
+                        yLimit = 10/1e3;
+                    case "20 mV"
+                        yLimit = 20/1e3;
+                    case "50 mV"
+                        yLimit = 50/1e3;
+                    case "100 mV"
+                        yLimit = 100/1e3;
+                    case "200 mV"
+                        yLimit = 200/1e3;
+                    case "500 mV"
+                        yLimit = 500/1e3;
+                    case "1 V"
+                        yLimit = 1;
+                    case "2 V"
+                        yLimit = 2;
+                    case "5 V"
+                        yLimit = 5;
+                    case "10 V"
+                        yLimit = 10;
+                    case "20 V"
+                        yLimit = 20;
+                    case "50 V"
+                        yLimit = 50;
+                end
+                
                 ylim(channelAxes,[-yLimit,yLimit]);
             end
         end
@@ -416,7 +481,7 @@ classdef View < handle
                 WarningDialogText = strcat("Channel ",obj.TriggerSettings.SimpleTriggerChannel.Value," has been disabled, ",...
                     "so the programe automatically sets the trigger at Channel ",EnabledChannels(1),".");
                 set(obj.TriggerSettings.SimpleTriggerChannel,'Value',EnabledChannels(1));
-                obj.controlObj.controller_updateTriggerSettings();
+                obj.modelObj.callback_updateTriggerChannelSetting(obj.controlObj.ChannelNameMaps(EnabledChannels(1)));
                 warndlg(WarningDialogText);
             end
 
@@ -488,6 +553,7 @@ classdef View < handle
                 end
             end
         end
+        
         function unavailableForSettings(obj)
             % Update trigger setting display sates
             TriggerSettingFields = fieldnames(obj.TriggerSettings);
